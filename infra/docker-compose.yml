@@ -1,0 +1,131 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: bookify-mysql
+    ports:
+      - "${MYSQL_PORT}:${MYSQL_PORT}"
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      # 각 애플리케이션의 영속 데이터 저장 위치 /var/lib/<app>
+      - bookify_mysql_data:/var/lib/mysql
+    command: [ "mysqld",
+               "--default-authentication-plugin=mysql_native_password",
+               "--character-set-server=utf8mb4",
+               "--collation-server=utf8mb4_unicode_ci" ]
+    networks: [ bookify-net ]
+
+  redis:
+    image: redis:7
+    container_name: bookify-redis
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    command: [ "redis-server", "--requirepass", "${REDIS_PASSWORD}" ]
+    volumes:
+      - bookify_redis_data:/var/lib/redis
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "PING" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [ bookify-net ]
+
+  redis-commander:
+    image: ghcr.io/joeferner/redis-commander:latest
+    container_name: bookify-redis-commander
+    ports:
+      - "${REDIS_COMMANDER_PORT}:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:${REDIS_PORT}:0:${REDIS_PASSWORD}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [ bookify-net ]
+
+  # Kafka 권한 초기화: 볼륨 권한을 수동으로 맞춤
+  kafka-perms:
+    image: alpine:3.20
+    container_name: bookify-kafka-perms
+    command: [ "sh", "-lc", "chown -R 1000:1000 /var/lib/kafka/data" ]
+    volumes:
+      - bookify_kafka_data:/var/lib/kafka/data
+    # 완료 후 바로 종료됨
+    networks: [ bookify-net ]
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: bookify-kafka
+    # user를 비루트(=1000)로 돌려도, 위 init이 권한을 맞춰줌
+    user: "1000:1000"
+    ports:
+      # 내부용: 도커 네트워크 내부 컨테이너들이 접속하는 브로커 포트
+      - "${KAFKA_PORT_INTERNAL}:${KAFKA_PORT_INTERNAL}"
+      # 외부용: 호스트가 접속하는 브로커 포트
+      - "${KAFKA_PORT_HOST}:${KAFKA_PORT_HOST}"
+    environment:
+      # KRaft 사용: 단일 노드 구성
+      KAFKA_NODE_ID: 1
+      # KRaft는 broker + controller 역할 모두 수행
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      # 컨트롤러 쿼럼(=브로커 집합): 컨트롤러로 참여하는 브로커들의 목록을 지정
+      # 형식: 브로커/컨트롤러의 노드 ID @ 컨테이너/호스트 이름 : 컨트롤러 전용 포트
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+
+      # 리스너 1. LISTENERS(=바인더) - 브로커가 실제로 열 포트/주소들 2. ADVERTISED_LISTENERS - 클라이언트에게 "나를 이렇게 불러"라고 알려주는 주소
+      # PLAINTEXT: 도커 내부 컨테이너 접속용, PLAINTEXT_HOST: 호스트에서 접속용, CONTROLLER: KRaft 컨트롤러 내부 통신용
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:${KAFKA_PORT_INTERNAL},PLAINTEXT_HOST://0.0.0.0:${KAFKA_PORT_HOST},CONTROLLER://0.0.0.0:9093'
+      # 도커 내부 서비스에게는 kafka:KAFKA_PORT_INTERNAL 로 알려주고, 호스트에게는 KAFKA_HOST_ADVERTISED:KAFKA_PORT_HOST 로 알려줌
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:${KAFKA_PORT_INTERNAL},PLAINTEXT_HOST://${KAFKA_HOST_ADVERTISED}:${KAFKA_PORT_HOST}"
+      # 각 리스너명 보안 프로토콜 매핑: 개발용이라 전부 PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      # 컨트롤러가 사용할 리스너 이름
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      # 브로커 간 통신에 사용할 리스너 이름: 단일 노드라도 지정 필요
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+
+      # 내부 토픽 복제 관련: 단일 노드라 1로 고정
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      # KRaft 클러스터 ID (Base64-encoded UUID)
+      CLUSTER_ID: 'ciWo7IWazngRchmPES6q5A=='
+
+      # KRaft 로그/메타데이터 저장 경로: 볼륨으로 영속화
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data"
+
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    # Kafka 데이터 영속 볼륨: 컨테이너 재생성에도 데이터 유지
+    volumes:
+      - bookify_kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: [ "CMD", "bash", "-lc", "kafka-topics --bootstrap-server localhost:${KAFKA_PORT_INTERNAL} --list || kafka-topics.sh --bootstrap-server localhost:${KAFKA_PORT_INTERNAL} --list" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [ bookify-net ]
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: bookify-kafka-ui
+    ports:
+      - "${KAFKA_UI_PORT}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      # 도커 네트워크 내부 주소로 연결
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:${KAFKA_PORT_INTERNAL}
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks: [bookify-net]
+
+networks:
+  bookify-net:
+
+volumes:
+  bookify_kafka_data:
+  bookify_redis_data:
+  bookify_mysql_data:
