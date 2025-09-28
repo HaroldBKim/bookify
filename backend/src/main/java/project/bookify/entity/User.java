@@ -1,27 +1,27 @@
-package project.bookify.Entity;
+package project.bookify.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "rooms")
+@Table(name = "users")
 @Setter @Getter
-public class Room {
-
+public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String code;
+    private String employeeId; // 사번
 
     @Column(nullable = false)
-    private int floor;
+    private String password;
 
     @Column(nullable = false)
-    private int capacity;
+    private String name;
 
-
+    @Column(nullable = false, unique = true)
+    private String email;
 
 }

@@ -24,17 +24,20 @@ spring:
 
   kafka:
     # Kafka 서버 주소 및 포트 -> 브로커 주소
-    bootstrap-servers: ${KAFKA_PORT_HOST}
+    bootstrap-servers: localhost:${KAFKA_PORT_HOST}
     producer:
       # Kafka 메시지의 Key를 문자열 직렬화
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       # Kafka 메시지의 Value를 문자열 직렬화
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     consumer:
-      # Kafka Consumer Group ID, 커슈머 그룹 ID
-      group-id: bookify-consumer
+      # Kafka Consumer Group ID
+#      group-id: bookify-consumer
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      # 어떤 패키지 객체든 허용
+      properties:
+        spring.json.trusted.packages: "*"
 
 server:
   port: 8080

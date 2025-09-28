@@ -1,14 +1,14 @@
-package project.bookify.Service;
+package project.bookify.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import project.bookify.Entity.Reservation;
-import project.bookify.Entity.ResourceType;
-import project.bookify.Entity.User;
-import project.bookify.Repository.ReservationRepository;
-import project.bookify.Repository.RoomRepository;
-import project.bookify.Repository.SeatRepository;
+import project.bookify.entity.Reservation;
+import project.bookify.entity.ResourceType;
+import project.bookify.entity.User;
+import project.bookify.repository.ReservationRepository;
+import project.bookify.repository.RoomRepository;
+import project.bookify.repository.SeatRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;

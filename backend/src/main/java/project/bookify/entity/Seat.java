@@ -1,4 +1,4 @@
-package project.bookify.Entity;
+package project.bookify.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
