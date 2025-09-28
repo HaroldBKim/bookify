@@ -1,7 +1,7 @@
-package project.bookify.Repository;
+package project.bookify.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import project.bookify.Entity.User;
+import project.bookify.entity.User;
 
 import java.util.Optional;
 
