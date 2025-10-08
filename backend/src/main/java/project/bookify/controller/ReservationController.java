@@ -1,13 +1,13 @@
-package project.bookify.Controller;
+package project.bookify.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import project.bookify.Entity.Reservation;
-import project.bookify.Entity.ResourceType;
-import project.bookify.Entity.User;
-import project.bookify.Repository.UserRepository;
-import project.bookify.Service.ReservationService;
+import project.bookify.entity.Reservation;
+import project.bookify.entity.ResourceType;
+import project.bookify.entity.User;
+import project.bookify.repository.UserRepository;
+import project.bookify.service.ReservationService;
 
 import java.time.LocalDateTime;
 import java.util.List;

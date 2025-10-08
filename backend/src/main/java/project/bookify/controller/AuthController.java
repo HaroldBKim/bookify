@@ -1,4 +1,4 @@
-package project.bookify.Controller;
+package project.bookify.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import project.bookify.Entity.User;
-import project.bookify.Service.UserService;
+import project.bookify.entity.User;
+import project.bookify.service.UserService;
 
 import java.util.Map;
 

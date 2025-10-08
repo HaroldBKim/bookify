@@ -1,4 +1,4 @@
-package project.bookify.Entity;
+package project.bookify.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -15,12 +15,14 @@ public class Reservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private User user;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private ResourceType resourceType;
 
+    @Column(nullable = false)
     private Long resourceId;
 
     private LocalDateTime startTime;
