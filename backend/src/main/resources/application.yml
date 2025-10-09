@@ -32,7 +32,7 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     consumer:
       # Kafka Consumer Group ID
-#      group-id: bookify-consumer
+      # group-id: bookify-consumer
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       # 어떤 패키지 객체든 허용

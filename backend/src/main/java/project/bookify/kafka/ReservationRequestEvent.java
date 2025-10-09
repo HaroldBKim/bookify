@@ -1,7 +1,6 @@
 package project.bookify.kafka;
 
 import project.bookify.entity.ResourceType;
-
 import java.time.LocalDateTime;
 
 public record ReservationRequestEvent (
@@ -11,4 +10,3 @@ public record ReservationRequestEvent (
     LocalDateTime startTime,
     LocalDateTime endTime
 ) {}
-
