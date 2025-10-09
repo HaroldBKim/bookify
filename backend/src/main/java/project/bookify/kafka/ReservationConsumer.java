@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,9 +28,9 @@ public class ReservationConsumer {
     private final SeatRepository seatRepository;
     private final RedisSlotManager redisSlotManager;
 
-    @KafkaListener(topics = "reservation.requests", groupId = "reservation-service")
+    @KafkaListener(topics = Topics.RESERVATION_REQUESTS, groupId = "reservation-service")
     @Transactional
-    public void handleReservation(ReservationRequestEvent event) {
+    public void handleRequestReservation(ReservationRequestEvent event) {
         List<String> keys = buildSlotKeys(event.resourceType(), event.resourceId(),
                 event.startTime(), event.endTime());
 
@@ -72,6 +73,23 @@ public class ReservationConsumer {
             redisSlotManager.releaseHold(keys); // DB 실패 시 해제
             throw e;
         }
+    }
+
+    @KafkaListener(topics = Topics.RESERVATION_CANCELLATIONS, groupId = "reservation-service")
+    @Transactional
+    public void handleCancelReservation(CancelReservationEvent event){
+
+        Reservation r = reservationRepository.findById(event.reservationId()).orElse(null);
+
+        if(r == null) return;
+        if(!r.getUser().getId().equals(event.userId())) throw new RuntimeException("본인 예약만 취소할 수 있습니다.");
+        if ("CANCELED".equals(r.getStatus())) return;
+
+        r.setStatus("CANCELED");
+        reservationRepository.save(r);
+
+        var keys = buildSlotKeys(r.getResourceType(), r.getResourceId(), r.getStartTime(), r.getEndTime());
+        redisSlotManager.releaseHold(keys);
     }
 
     private List<String> buildSlotKeys(ResourceType type, Long id,

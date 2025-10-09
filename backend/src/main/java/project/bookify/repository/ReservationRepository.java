@@ -6,6 +6,7 @@ import project.bookify.entity.ResourceType;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
     List<Reservation> findByUserId(Long userId);
@@ -17,5 +18,14 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             String status,
             LocalDateTime newEnd,
             LocalDateTime newStart
+    );
+
+    Optional<Reservation> findFirstByUserIdAndResourceTypeAndResourceIdAndStartTimeAndEndTimeAndStatus(
+            Long userId,
+            ResourceType resourceType,
+            Long resourceId,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            String status
     );
 }

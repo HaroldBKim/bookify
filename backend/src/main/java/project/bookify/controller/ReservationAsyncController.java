@@ -22,7 +22,7 @@ public class ReservationAsyncController {
     private final ReservationAsyncService reservationAsyncService;
     private final UserRepository userRepository;
 
-    @PostMapping
+    @PostMapping("/request")
     public ResponseEntity<String> requestReservation(@RequestBody Map<String, String> req) {
         User user = userRepository.findById(Long.parseLong(req.get("userId")))
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
@@ -36,6 +36,15 @@ public class ReservationAsyncController {
         );
 
         return ResponseEntity.ok("예약 요청이 접수되었습니다.");
+    }
+
+    @PostMapping("/cancel")
+    public ResponseEntity<String> cancelReservation(@RequestBody Map<String, String> req) {
+        reservationAsyncService.cancelReservation(
+                Long.parseLong(req.get("userId")),
+                Long.parseLong(req.get("reservationId"))
+        );
+        return ResponseEntity.ok("예약 취소 요청이 접수되었습니다.");
     }
 
 }

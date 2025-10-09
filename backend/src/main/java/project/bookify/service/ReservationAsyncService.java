@@ -2,11 +2,14 @@ package project.bookify.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import project.bookify.entity.Reservation;
 import project.bookify.entity.ResourceType;
 import project.bookify.entity.User;
+import project.bookify.kafka.CancelReservationEvent;
 import project.bookify.kafka.ReservationProducer;
 import project.bookify.kafka.ReservationRequestEvent;
 import project.bookify.redis.RedisSlotManager;
+import project.bookify.repository.ReservationRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -19,6 +22,7 @@ public class ReservationAsyncService {
 
     private final ReservationProducer producer;
     private final RedisSlotManager redisSlotManager;
+    private final ReservationRepository reservationRepository;
 
     private static final int HOLD_TTL_SEC = 10; // 임시 홀드 TTL (DB 확정까지 버티는 시간)
 
@@ -37,6 +41,18 @@ public class ReservationAsyncService {
         producer.sendReservationRequest(
                 new ReservationRequestEvent(user.getId(), type, resourceId, start, end)
         );
+    }
+
+    public void cancelReservation(Long userId, Long reservationId){
+        Reservation r = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다."));
+
+        producer.sendReservationCancel(new CancelReservationEvent(
+                userId,
+                r.getResourceType(),
+                reservationId,
+                r.getResourceId()
+        ));
     }
 
     private List<String> buildSlotKeys(ResourceType type, Long id,
